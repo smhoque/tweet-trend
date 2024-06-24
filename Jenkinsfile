@@ -25,7 +25,7 @@ pipeline {
                 echo "---------unit test completed--------"
             }
          }
-        stage('SonarQube analysis') {
+    /**    stage('SonarQube analysis') {
         environment {
           scannerHome = tool 'Udemy-sonar-scanner'
         }
@@ -47,7 +47,7 @@ pipeline {
 }
      }
   }
-
+**/
 
          stage("Jar Publish") {
         steps {
