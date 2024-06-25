@@ -50,7 +50,7 @@ pipeline {
      }
   }
 
-*/
+
          stage("Jar Publish") {
         steps {
             script {
@@ -77,7 +77,7 @@ pipeline {
         }   
     }
     
-
+*/
 
   }
 }
