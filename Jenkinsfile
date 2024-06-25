@@ -1,4 +1,4 @@
-def registry = 'https://pnt01.jfrog.io/'
+//def registry = 'https://pnt01.jfrog.io/'
 pipeline {
     agent {
         node {
@@ -25,7 +25,7 @@ pipeline {
                 echo "---------unit test completed--------"
             }
          }
-      /**
+      /*
        stage('SonarQube analysis') {
         environment {
           scannerHome = tool 'Udemy-sonar-scanner'
@@ -36,7 +36,7 @@ pipeline {
       }
     }
   }
-  /**
+  
   stage("Quality Gate"){
      steps{
         script{
@@ -50,7 +50,7 @@ pipeline {
      }
   }
 
-**/
+*/
          stage("Jar Publish") {
         steps {
             script {
