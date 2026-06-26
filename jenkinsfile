@@ -1,18 +1,77 @@
 pipeline {
     agent {
         node {
-            label "maven"
+            label 'maven'
         }
     }
-    environment{
-         PATH = "/opt/apache-maven-3.9.16/bin:$PATH"
-}
+
+    environment {
+        PATH = "/opt/apache-maven-3.9.16/bin:${env.PATH}"
+        SCANNER_HOME = tool('valaxy-sonar-scanner')
+    }
 
     stages {
-        stage('build') {
+
+        stage('Checkout') {
             steps {
-                sh 'mvn clean deploy'
+                echo "========== Checking out source code =========="
+                checkout scm
             }
+        }
+
+        stage('Build') {
+            steps {
+                echo "========== Build Started =========="
+                sh 'mvn clean deploy -DskipTests'
+                echo "========== Build Completed =========="
+            }
+        }
+
+        stage('Unit Test Report') {
+            steps {
+                echo "========== Generating Unit Test Report =========="
+                sh 'mvn surefire-report:report'
+                echo "========== Report Generated =========="
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                echo "========== SonarQube Analysis Started =========="
+
+                withSonarQubeEnv('valaxy-sonar-server') {
+                    sh "${SCANNER_HOME}/bin/sonar-scanner"
+                }
+
+                echo "========== SonarQube Analysis Completed =========="
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+    }
+
+    post {
+
+        always {
+            echo "Pipeline execution finished."
+        }
+
+        success {
+            echo "Pipeline completed successfully."
+        }
+
+        failure {
+            echo "Pipeline failed."
+        }
+
+        unstable {
+            echo "Pipeline is unstable."
         }
     }
 }
