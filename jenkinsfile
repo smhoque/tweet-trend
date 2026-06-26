@@ -9,43 +9,42 @@ pipeline {
     environment {
         PATH = "/opt/apache-maven-3.9.16/bin:${env.PATH}"
         SCANNER_HOME = tool('valaxy-sonar-scanner')
-        REGISTRY = 'https://trialuljnwv.jfrog.io'
+
+        REGISTRY   = 'https://trialuljnwv.jfrog.io'
+        IMAGE_NAME = 'trialuljnwv.jfrog.io/valaxy-docker-local/ttrend'
+        VERSION    = '2.1.2'
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                echo "========== Checking out source code =========="
+                echo "========== Checkout =========="
                 checkout scm
             }
         }
 
         stage('Build') {
             steps {
-                echo "========== Build Started =========="
+                echo "========== Maven Build =========="
                 sh 'mvn clean deploy -DskipTests'
-                echo "========== Build Completed =========="
             }
         }
 
         stage('Unit Test Report') {
             steps {
-                echo "========== Generating Unit Test Report =========="
+                echo "========== Unit Test Report =========="
                 sh 'mvn surefire-report:report'
-                echo "========== Report Generated =========="
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                echo "========== SonarQube Analysis Started =========="
+                echo "========== SonarQube Analysis =========="
 
                 withSonarQubeEnv('valaxy-sonar-server') {
                     sh "${SCANNER_HOME}/bin/sonar-scanner"
                 }
-
-                echo "========== SonarQube Analysis Completed =========="
             }
         }
 
@@ -53,7 +52,7 @@ pipeline {
             steps {
                 script {
 
-                    echo "========== Jar Publish Started =========="
+                    echo "========== Publishing JAR =========="
 
                     def server = Artifactory.newServer(
                         url: "${REGISTRY}/artifactory",
@@ -82,7 +81,39 @@ pipeline {
                     buildInfo.env.collect()
                     server.publishBuildInfo(buildInfo)
 
-                    echo "========== Jar Publish Completed =========="
+                    echo "========== JAR Published =========="
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+
+                    echo "========== Docker Build Started =========="
+
+                    def app = docker.build("${IMAGE_NAME}:${VERSION}")
+
+                    env.DOCKER_IMAGE = "${IMAGE_NAME}:${VERSION}"
+
+                    echo "========== Docker Build Completed =========="
+                }
+            }
+        }
+
+        stage('Docker Publish') {
+            steps {
+                script {
+
+                    echo "========== Docker Push Started =========="
+
+                    docker.withRegistry("${REGISTRY}", "artifactory_token") {
+
+                        docker.image(env.DOCKER_IMAGE).push()
+
+                    }
+
+                    echo "========== Docker Push Completed =========="
                 }
             }
         }
