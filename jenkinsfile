@@ -1,4 +1,5 @@
 pipeline {
+
     agent {
         node {
             label 'maven'
@@ -8,6 +9,7 @@ pipeline {
     environment {
         PATH = "/opt/apache-maven-3.9.16/bin:${env.PATH}"
         SCANNER_HOME = tool('valaxy-sonar-scanner')
+        REGISTRY = 'https://trialuljnwv.jfrog.io'
     }
 
     stages {
@@ -46,24 +48,63 @@ pipeline {
                 echo "========== SonarQube Analysis Completed =========="
             }
         }
+
+        stage('Jar Publish') {
+            steps {
+                script {
+
+                    echo "========== Jar Publish Started =========="
+
+                    def server = Artifactory.newServer(
+                        url: "${REGISTRY}/artifactory",
+                        credentialsId: "artifactory_token"
+                    )
+
+                    def properties = "buildid=${env.BUILD_ID};commitid=${env.GIT_COMMIT}"
+
+                    def uploadSpec = """{
+                      "files": [
+                        {
+                          "pattern": "jarstaging/(*)",
+                          "target": "mvn-libs-release-local/{1}",
+                          "flat": "false",
+                          "props": "${properties}",
+                          "exclusions": [
+                            "*.sha1",
+                            "*.md5"
+                          ]
+                        }
+                      ]
+                    }"""
+
+                    def buildInfo = server.upload(uploadSpec)
+
+                    buildInfo.env.collect()
+                    server.publishBuildInfo(buildInfo)
+
+                    echo "========== Jar Publish Completed =========="
+                }
+            }
+        }
+
     }
 
     post {
 
         always {
-            echo "Pipeline execution finished."
+            echo "========== Pipeline Finished =========="
         }
 
         success {
-            echo "Pipeline completed successfully."
+            echo "========== Pipeline Succeeded =========="
         }
 
         failure {
-            echo "Pipeline failed."
+            echo "========== Pipeline Failed =========="
         }
 
         unstable {
-            echo "Pipeline is unstable."
+            echo "========== Pipeline Unstable =========="
         }
     }
 }
